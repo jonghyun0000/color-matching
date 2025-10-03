@@ -1,0 +1,388 @@
+<!--
+변경 요약
+- '모든 상의 색' 섹션을 <details>로 감싸 기본 접힘. summary 클릭 시 펼치기/접기.
+- summary 내부에 실시간 개수 표시( render() 시 갱신 ).
+환경/의존성: 단일 파일(외부 라이브러리 없음) · 로컬스토리지 사용(즐겨찾기/최근 선택)
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>남자 상·하의 컬러 매칭 – 최종본(접기/펼치기)</title>
+  <style>
+    :root{
+      --bg:#0f1115; --card:#151924; --muted:#8992a5; --text:#e8ecf1; --accent:#5da9ff;
+      --chip:#1e2330; --border:#212635; --ok:#66d19e; --safe:#9db2ff; --pro:#ffcf6e;
+      --danger:#ff7a7a; --focus:#2b3a5c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:var(--bg); color:var(--text);}
+    .wrap{max-width:1080px; margin:24px auto; padding:16px}
+    .header{display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px}
+    .title{font-size:20px; font-weight:800}
+    .sub{color:var(--muted); font-size:13px}
+    .panel{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .search{flex:1; min-width:260px; display:flex; gap:8px; align-items:center; background:#0e1119;
+      border:1px solid var(--border); border-radius:12px; padding:10px 12px}
+    .search input{flex:1; background:transparent; border:0; outline:none; color:var(--text); font-size:15px}
+    .btn{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); background:#0e1119;
+      color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer; user-select:none}
+    .btn:hover{border-color:#3a4256}
+    .btn.ghost{background:transparent}
+    .hint{color:var(--muted); font-size:12px}
+    .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px}
+    .card{background:#0e1119; border:1px solid var(--border); border-radius:14px; padding:12px; position:relative}
+    .card .star{position:absolute; right:10px; top:10px; cursor:pointer; font-size:16px; opacity:.9}
+    .card .star.fav{color:#ffd76b; text-shadow:0 0 8px #0006}
+    .swatch{width:18px; height:18px; border-radius:4px; border:1px solid #0006; display:inline-block}
+    .name{font-weight:700; margin-left:8px}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px dashed var(--border);
+      border-radius:10px; color:var(--muted); font-size:13px}
+    .section{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px}
+    .sec-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+    .tag{font-weight:800; font-size:14px}
+    .ok{color:var(--ok)} .safe{color:var(--safe)} .pro{color:var(--pro)}
+    .chips{display:flex; flex-wrap:wrap; gap:8px}
+    .chip{display:inline-flex; align-items:center; gap:8px; background:var(--chip); border:1px solid var(--border);
+      padding:8px 10px; border-radius:999px}
+    .empty{color:#93a0ba}
+    .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0}
+    .select{background:#0e1119; border:1px solid var(--border); color:var(--text); border-radius:10px; padding:8px}
+    .hr{height:1px; background:var(--border); margin:12px 0}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:#0e1119; border:1px solid var(--border); padding:2px 6px; border-radius:6px}
+    @media (prefers-reduced-motion:no-preference){
+      .card{transition:transform .08s ease}
+      .card:hover{transform:translateY(-2px)}
+    }
+    /* details/summary 스타일 */
+    details.section{padding:0}
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding:14px;
+      border-radius:16px;
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--card); border:1px solid var(--border);
+    }
+    summary::-webkit-details-marker{display:none}
+    .sum-left{display:flex; align-items:center; gap:10px}
+    .chev{transition:transform .15s ease; opacity:.9}
+    details[open] .chev{transform:rotate(90deg)}
+    .sum-hint{color:var(--muted); font-size:12px}
+    .inside{padding:14px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div>
+        <div class="title">남자 상·하의 컬러 매칭 · 최종본</div>
+        <div class="sub">모든 상의 색은 접힘(기본) · 즐겨찾기(★) · 즉시 추천(찰떡/무난/고수)</div>
+      </div>
+      <button class="btn ghost" id="resetBtn" title="초기화">초기화</button>
+    </div>
+
+    <!-- 검색/빠른 실행 패널 -->
+    <div class="panel">
+      <div class="row">
+        <div class="search" role="search">
+          <span class="hint">상의</span>
+          <input id="topInput" list="colorList" placeholder="예: 버건디, 차콜, 네이비, 화이트…" aria-label="상의 색 입력"/>
+          <button class="btn" id="matchBtn">추천 보기</button>
+        </div>
+        <div class="pill">Tip: 스와치 클릭 → <span class="kbd">색 이름</span> 복사</div>
+      </div>
+
+      <div class="toolbar">
+        <label class="hint">정렬:
+          <select id="sortSelect" class="select">
+            <option value="name">이름순(A→Z)</option>
+            <option value="preset">프리셋(자주쓰는색 우선)</option>
+          </select>
+        </label>
+        <label class="hint">필터:
+          <select id="filterSelect" class="select">
+            <option value="all">전체</option>
+            <option value="favorites">즐겨찾기만</option>
+            <option value="neutrals">뉴트럴</option>
+            <option value="warm">웜</option>
+            <option value="cool">쿨</option>
+            <option value="green">그린</option>
+          </select>
+        </label>
+        <span class="hint">Enter 실행 · 최근 선택 자동 저장</span>
+      </div>
+    </div>
+
+    <!-- 즐겨찾기 섹션 -->
+    <div id="favSection" class="section" style="display:none; margin-top:12px;">
+      <div class="sec-head">
+        <div class="tag">★ 즐겨찾기</div>
+        <div class="hint" id="favCount"></div>
+      </div>
+      <div id="favGrid" class="grid"></div>
+    </div>
+
+    <!-- 전체 색상 섹션 (접기/펼치기) -->
+    <details id="allSection" class="section" style="margin-top:12px;">
+      <summary>
+        <div class="sum-left">
+          <span class="chev">▶</span>
+          <span class="tag">모든 상의 색</span>
+        </div>
+        <div class="sum-hint" id="allCount">0개</div>
+      </summary>
+      <div class="inside">
+        <datalist id="colorList"></datalist>
+        <div id="allGrid" class="grid" aria-live="polite"></div>
+      </div>
+    </details>
+
+    <!-- 결과 -->
+    <div class="section" style="margin-top:12px;">
+      <div class="sec-head">
+        <div class="tag">추천 하의</div>
+        <div class="hint" id="recentHint">최근 선택: -</div>
+      </div>
+      <div id="resultArea"><p class="empty">💡 상의 색을 선택하면 하의 추천이 여기에 표시됩니다.</p></div>
+    </div>
+
+    <div class="hr"></div>
+    <div class="hint">편집: JS의 <span class="kbd">COLOR_MAP</span>을 수정하면 즉시 반영됩니다.</div>
+  </div>
+
+  <script>
+    // ===== 스와치 색상(hex) 사전(표시용) =====
+    const COLOR_HEX = {
+      "버건디":"##7A1F2B".replace('##','#'), "네이비":"#0E2C54", "미드 그레이":"#8B8F98", "포레스트 그린":"#2F5D50",
+      "화이트":"#FFFFFF", "아이보리":"#F5F0E6", "크림":"#FAF3E5", "베이지":"#D9C7A1",
+      "차콜":"#2B2F39", "블랙":"#000000", "브라운":"#6E4C3A", "모카":"#7B5B48",
+      "카키(올리브)":"#6C7A3C", "올리브":"#6C7A3C", "그린":"#2A8A4B", "세이지 그린":"#8AA391",
+      "라이트 그레이":"#D7DBE0", "그레이":"#8B8F98", "슬레이트 블루":"#5B6E8A",
+      "중청 데님":"#274D7E", "흑청":"#31343C", "라일락":"#B79BCF", "퍼플":"#6441A5",
+      "핑크":"#E7A8B3", "코랄":"#FF7F6E", "테라코타":"#C25A3A", "레드":"#E53935",
+      "오렌지":"#F78C2F", "옐로우":"#FACF37", "버터 옐로":"#F2E29D",
+      "소라색":"#9EC5E8", "라이트 블루":"#AFC9F6", "민트":"#AEE4D4", "틸(청록)":"#1C8073",
+      "그레이지":"#BDB6A6", "딥블루":"#0B3A7E", "연두색":"#9ED36A"
+    };
+
+    // ===== 상의 → 하의 추천 매핑(찰떡/무난/고수) =====
+    const COLOR_MAP = {
+      "버건디": { perfect:["아이보리","네이비"], safe:["블랙","라이트 그레이"], pro:["베이지","옐로우","그레이지"] },
+      "네이비": { perfect:["화이트","아이보리","라이트 그레이"], safe:["네이비","블랙"], pro:["베이지","카키(올리브)","브라운"] },
+      "미드 그레이": { perfect:["블랙","네이비"], safe:["라이트 그레이","흑청","중청 데님"], pro:["베이지","카키(올리브)"] },
+      "포레스트 그린": { perfect:["라이트 그레이","아이보리"], safe:["네이비","블랙"], pro:["베이지","브라운"] },
+      "화이트": { perfect:["네이비","블랙","그레이"], safe:["라이트 그레이","중청 데님","흑청"], pro:["카키(올리브)","브라운","베이지"] },
+      "소라색": { perfect:["네이비","그레이"], safe:["블랙","라이트 그레이"], pro:["베이지","카키(올리브)"] },
+      "브라운": { perfect:["아이보리","라이트 그레이"], safe:["네이비","블랙"], pro:["카키(올리브)","그레이지"] },
+      "차콜": { perfect:["카키(올리브)","라이트 그레이"], safe:["블랙","네이비","그레이지"], pro:["베이지","브라운"] },
+      "옐로우": { perfect:["네이비","그레이"], safe:["블랙","라이트 그레이"], pro:["브라운","아이보리"] },
+      "블랙": { perfect:["블랙","차콜","라이트 그레이"], safe:["네이비","흑청"], pro:["베이지","브라운","카키(올리브)"] },
+      "연두색": { perfect:["네이비","그레이"], safe:["블랙","라이트 그레이"], pro:["베이지"] },
+      "딥블루": { perfect:["아이보리","라이트 그레이"], safe:["블랙","네이비"], pro:["베이지"] },
+      "레드": { perfect:["네이비"], safe:["블랙","베이지"], pro:["그린","카키(올리브)"] },
+      "베이지": { perfect:["네이비","블랙"], safe:["라이트 그레이","중청 데님"], pro:["브라운","카키(올리브)"] },
+      "핑크": { perfect:["그레이","네이비"], safe:["블랙","라이트 그레이"], pro:["베이지","카키(올리브)"] },
+      "아이보리": { perfect:["네이비","차콜"], safe:["블랙","그레이"], pro:["브라운","올리브"] },
+      "퍼플": { perfect:["베이지","그레이"], safe:["블랙","라이트 그레이"], pro:["카키(올리브)","아이보리"] },
+      "카키(올리브)": { perfect:["블랙","아이보리"], safe:["흑청","라이트 그레이"], pro:["네이비","브라운","버건디"] },
+      "중청 데님": { perfect:["화이트","아이보리","그레이"], safe:["블랙","네이비"], pro:["베이지"] },
+      "오렌지": { perfect:["네이비","그레이"], safe:["블랙","라이트 그레이"], pro:["카키(올리브)"] },
+      "버터 옐로": { perfect:["네이비","그레이"], safe:["블랙","라이트 그레이"], pro:["브라운"] },
+      "세이지 그린": { perfect:["아이보리","라이트 그레이"], safe:["네이비","블랙"], pro:["베이지","브라운"] },
+      "라일락": { perfect:["그레이","네이비"], safe:["블랙","라이트 그레이"], pro:["베이지"] },
+      "코랄": { perfect:["화이트","그레이"], safe:["네이비","블랙"], pro:["베이지","카키(올리브)"] },
+      "테라코타": { perfect:["아이보리","그레이"], safe:["네이비","블랙"], pro:["베이지"] },
+      "모카": { perfect:["아이보리","라이트 그레이"], safe:["블랙","네이비"], pro:["카키(올리브)","틸(청록)"] },
+      "그레이지": { perfect:["블랙","차콜"], safe:["네이비","브라운"], pro:["민트","핑크"] },
+      "슬레이트 블루": { perfect:["베이지","그레이"], safe:["블랙","라이트 그레이"], pro:["카키(올리브)"] },
+      "틸(청록)": { perfect:["베이지","그레이"], safe:["블랙","라이트 그레이"], pro:["카키(올리브)"] },
+      "민트": { perfect:["네이비","그레이"], safe:["차콜","블랙"], pro:["베이지","브라운"] },
+      "라이트 그레이": { perfect:["블랙","네이비"], safe:["중청 데님","흑청"], pro:["베이지","카키(올리브)"] },
+      "흑청": { perfect:["화이트","아이보리"], safe:["블랙","라이트 그레이"], pro:["베이지","카키(올리브)"] },
+      "크림": { perfect:["네이비","차콜"], safe:["블랙","그레이"], pro:["브라운","올리브"] },
+      "그레이": { perfect:["블랙","네이비"], safe:["라이트 그레이","흑청","중청 데님"], pro:["베이지","카키(올리브)"] },
+      "라이트 블루": { perfect:["네이비","화이트"], safe:["블랙","그레이"], pro:["베이지","올리브"] },
+      "올리브": { perfect:["블랙","아이보리"], safe:["네이비","차콜"], pro:["버건디","레드"] }
+    };
+
+    // ===== 프리셋(자주 쓰는 순) =====
+    const PRESET_ORDER = ["화이트","블랙","네이비","차콜","그레이","라이트 그레이","베이지","카키(올리브)","브라운","버건디","핑크","레드","소라색","라이트 블루"];
+
+    // ===== 상태 저장 키 =====
+    const LS_KEYS = { fav:"favColors.v1", recent:"recentColor.v1" };
+
+    // ===== 도우미 =====
+    const $ = (q)=>document.querySelector(q);
+    function safeGetLS(key, fallback){
+      try{ const v = localStorage.getItem(key); return v? JSON.parse(v): fallback; }catch{ return fallback; }
+    }
+    function safeSetLS(key, obj){
+      try{ localStorage.setItem(key, JSON.stringify(obj)); }catch{}
+    }
+
+    // ===== 데이터 준비 =====
+    const COLOR_NAMES = Object.keys(COLOR_MAP);
+    function setDatalist(){
+      const dl = $('#colorList'); dl.innerHTML='';
+      COLOR_NAMES.forEach(n=>{ const o=document.createElement('option'); o.value=n; dl.appendChild(o); });
+    }
+
+    // ===== 카드 생성 & 즐겨찾기 =====
+    function getFav(){ return new Set(safeGetLS(LS_KEYS.fav, [])); }
+    function isFav(n){ return getFav().has(n); }
+    function toggleFav(n){
+      const s = getFav();
+      if(s.has(n)) s.delete(n); else s.add(n);
+      safeSetLS(LS_KEYS.fav, Array.from(s));
+    }
+    function makeCard(name){
+      const card = document.createElement('div'); card.className='card'; card.dataset.name=name;
+
+      const star = document.createElement('span');
+      star.className='star'; star.title='즐겨찾기';
+      star.textContent = isFav(name)? '★':'☆';
+      if(isFav(name)) star.classList.add('fav');
+      star.onclick = (e)=>{ e.stopPropagation(); toggleFav(name); render(); };
+
+      const head = document.createElement('div'); head.className='row';
+      const sw = document.createElement('span'); sw.className='swatch'; sw.style.background = COLOR_HEX[name] || '#9aa3b2';
+      sw.title = `${name} (클릭하면 이름 복사)`; sw.onclick = (e)=>{ e.stopPropagation(); navigator.clipboard?.writeText(name); };
+
+      const nm = document.createElement('span'); nm.className='name'; nm.textContent=name;
+
+      const sub = document.createElement('div'); sub.className='hint'; sub.style.marginTop='6px';
+      sub.textContent = '클릭하면 추천 보기';
+
+      head.appendChild(sw); head.appendChild(nm);
+      card.appendChild(star); card.appendChild(head); card.appendChild(sub);
+      card.onclick = ()=>{ $('#topInput').value=name; showMatch(name); setRecent(name); };
+      return card;
+    }
+
+    // ===== 최근 선택 =====
+    function setRecent(n){ safeSetLS(LS_KEYS.recent, n); updateRecentHint(); }
+    function getRecent(){ return safeGetLS(LS_KEYS.recent, null); }
+    function updateRecentHint(){
+      const r = getRecent();
+      $('#recentHint').textContent = '최근 선택: ' + (r || '-');
+    }
+
+    // ===== 렌더링 =====
+    function render(){
+      // 즐겨찾기 섹션
+      const favSet = getFav();
+      const favArr = COLOR_NAMES.filter(n => favSet.has(n));
+      const favSec = $('#favSection');
+      const favGrid = $('#favGrid');
+      if(favArr.length){
+        favSec.style.display='block';
+        $('#favCount').textContent = `${favArr.length}개`;
+        favGrid.innerHTML=''; favArr.forEach(n=>favGrid.appendChild(makeCard(n)));
+      }else{
+        favSec.style.display='none';
+      }
+
+      // 전체(정렬/필터 적용) + 개수 summary 갱신
+      const sort = $('#sortSelect').value;
+      const filt = $('#filterSelect').value;
+
+      let arr = COLOR_NAMES.slice();
+      if(filt==='favorites') arr = arr.filter(n=>favSet.has(n));
+      else if(filt==='neutrals') arr = arr.filter(n=>["블랙","그레이","라이트 그레이","네이비","아이보리","베이지","차콜","크림"].includes(n));
+      else if(filt==='warm') arr = arr.filter(n=>["브라운","테라코타","오렌지","옐로우","버건디","모카","버터 옐로"].includes(n));
+      else if(filt==='cool') arr = arr.filter(n=>["소라색","라이트 블루","딥블루","슬레이트 블루","퍼플","라일락","민트","틸(청록)"].includes(n));
+      else if(filt==='green') arr = arr.filter(n=>["카키(올리브)","올리브","포레스트 그린","세이지 그린","그린","연두색"].includes(n));
+
+      if(sort==='name') arr.sort((a,b)=>a.localeCompare(b,'ko'));
+      else if(sort==='preset'){
+        const idx = (n)=>{ const i = PRESET_ORDER.indexOf(n); return i===-1? 999: i; };
+        arr.sort((a,b)=> idx(a)-idx(b) || a.localeCompare(b,'ko'));
+      }
+
+      // summary의 개수 텍스트 갱신
+      const allCount = document.getElementById('allCount');
+      allCount.textContent = `${arr.length}개`;
+
+      // 그리드 렌더
+      const allGrid = $('#allGrid');
+      allGrid.innerHTML=''; arr.forEach(n=>allGrid.appendChild(makeCard(n)));
+    }
+
+    // ===== 결과 표시 =====
+    function chip(name){
+      const div=document.createElement('span');
+      div.className='chip';
+      const hex = COLOR_HEX[name] || '#9aa3b2';
+      div.innerHTML=`<span class="swatch" title="${name}" style="background:${hex}"></span>${name}`;
+      div.querySelector('.swatch').addEventListener('click', ()=>navigator.clipboard?.writeText(name));
+      return div;
+    }
+
+    function showMatch(name){
+      const data = COLOR_MAP[name];
+      const area = document.getElementById('resultArea'); area.innerHTML='';
+      if(!data){
+        const p=document.createElement('p'); p.className='empty';
+        p.textContent = `등록되지 않은 색상입니다: "${name}". 비슷한 색을 선택하거나 COLOR_MAP에 추가하세요.`;
+        area.appendChild(p); return;
+      }
+      const head=document.createElement('div'); head.className='row'; head.style.marginBottom='6px';
+      head.innerHTML = `<div class="pill">선택한 상의:
+        <span class="swatch" style="margin-left:8px;background:${COLOR_HEX[name]||'#999'}"></span>
+        <span style="margin-left:8px">${name}</span></div>`;
+      area.appendChild(head);
+
+      const grid=document.createElement('div'); grid.className='grid';
+      const sec=(label,cls,arr)=>{
+        const box=document.createElement('div'); box.className='panel';
+        box.innerHTML = `<div class="sec-head"><div class="tag ${cls}">${label}</div><div class="hint">${arr.length}개</div></div>`;
+        const wrap=document.createElement('div'); wrap.className='chips';
+        (arr||[]).forEach(c=>wrap.appendChild(chip(c)));
+        box.appendChild(wrap); grid.appendChild(box);
+      };
+      sec('찰떡(강력 추천)','ok', data.perfect||[]);
+      sec('무난(안전한 선택)','safe', data.safe||[]);
+      sec('고수의 영역(포인트)','pro', data.pro||[]);
+      area.appendChild(grid);
+    }
+
+    // ===== 초기화 & 이벤트 =====
+    function resetAll(){
+      safeSetLS(LS_KEYS.fav, []);
+      safeSetLS(LS_KEYS.recent, null);
+      document.getElementById('topInput').value='';
+      document.getElementById('filterSelect').value='all';
+      document.getElementById('sortSelect').value='name';
+      document.getElementById('resultArea').innerHTML='<p class="empty">💡 상의 색을 선택하면 하의 추천이 여기에 표시됩니다.</p>';
+      render(); updateRecentHint();
+      // 전체 섹션은 기본 접힘 유지
+      const all = document.getElementById('allSection');
+      if(all.open) all.removeAttribute('open');
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      setDatalist(); updateRecentHint(); render();
+
+      // 최근 선택 복원(있으면 바로 표시)
+      const recent = safeGetLS(LS_KEYS.recent, null);
+      if(recent && COLOR_MAP[recent]){ document.getElementById('topInput').value=recent; showMatch(recent); }
+
+      document.getElementById('matchBtn').addEventListener('click', ()=>{
+        const v = document.getElementById('topInput').value.trim();
+        if(!v){ document.getElementById('topInput').focus(); return; }
+        showMatch(v); setRecent(v);
+      });
+      document.getElementById('topInput').addEventListener('keydown', (e)=>{
+        if(e.key==='Enter'){ e.preventDefault(); document.getElementById('matchBtn').click(); }
+      });
+      document.getElementById('sortSelect').addEventListener('change', render);
+      document.getElementById('filterSelect').addEventListener('change', render);
+      document.getElementById('resetBtn').addEventListener('click', resetAll);
+    });
+  </script>
+</body>
+</html>
