@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>남자 상·하의 컬러 매칭 · 핵심5 + 더보기</title>
+<title>상·하의 컬러 매칭 · 핵심5 + 더보기</title>
 <style>
   :root{
     --bg:#0f1115; --card:#151924; --text:#e8ecf1; --muted:#93a0ba; --border:#212635;
@@ -15,9 +15,10 @@
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
   .title{font-weight:800; font-size:20px; margin-bottom:8px}
   .panel,.section{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px}
-  .search{flex:1; min-width:260px; display:flex; gap:8px; align-items:center; background:#0e1119; border:1px solid var(--border); border-radius:10px; padding:10px 12px}
-  .search input{flex:1; border:0; outline:none; background:transparent; color:var(--text); font-size:15px}
-  .btn{border:1px solid var(--border); background:#0e1119; color:#e8ecf1; padding:10px 12px; border-radius:10px; cursor:pointer; transition:background .2s}
+  /* shrunk search */
+  .search{flex:1; min-width:200px; max-width:520px; display:flex; gap:8px; align-items:center; background:#0e1119; border:1px solid var(--border); border-radius:10px; padding:6px 10px}
+  .search input{flex:1; border:0; outline:none; background:transparent; color:var(--text); font-size:14px}
+  .btn{border:1px solid var(--border); background:#0e1119; color:#e8ecf1; padding:8px 10px; border-radius:10px; cursor:pointer; transition:background .2s}
   .btn:hover{background:var(--border)}
   .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px}
   .card{background:#0e1119; border:1px solid var(--border); border-radius:12px; padding:12px; position:relative; cursor:pointer}
@@ -38,7 +39,7 @@
   .chev{transition:transform .15s ease; opacity:.9}
   details[open] .chev{transform:rotate(90deg)}
 
-  /* ===== [신규] 미리보기 스타일 ===== */
+  /* preview */
   .preview-wrap{display:flex; gap:10px; margin-bottom:12px; align-items:stretch}
   .preview{flex:1; min-width:80px; background:var(--bg); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; padding:4px}
   .preview-top, .preview-bottom{flex:1; border-radius:6px; transition:background-color .3s ease}
@@ -51,7 +52,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="title">남자 상·하의 컬러 매칭</div>
+  <div class="title">상·하의 컬러 매칭</div>
 
   <div class="panel" style="margin-bottom:12px;">
     <div class="row">
@@ -94,64 +95,46 @@
 </div>
 
 <script>
-/* ===== 데이터: 스와치 색, 상하의 조합 ===== */
+/* ===== 데이터 ===== */
 const COLOR_HEX = {"버건디":"#7A1F2B","네이비":"#0E2C54","미드 그레이":"#8B8F98","포레스트 그린":"#2F5D50","화이트":"#FFFFFF","아이보리":"#F5F0E6","크림":"#FAF3E5","베이지":"#D9C7A1","차콜":"#2B2F39","블랙":"#000000","브라운":"#6E4C3A","모카":"#7B5B48","카키(올리브)":"#6C7A3C","올리브":"#6C7A3C","그린":"#2A8A4B","세이지 그린":"#8AA391","라이트 그레이":"#D7DBE0","그레이":"#8B8F98","슬레이트 블루":"#5B6E8A","중청 데님":"#274D7E","흑청":"#31343C","라일락":"#B79BCF","퍼플":"#6441A5","핑크":"#E7A8B3","코랄":"#FF7F6E","테라코타":"#C25A3A","레드":"#E53935","오렌지":"#F78C2F","옐로우":"#FACF37","버터 옐로":"#F2E29D","소라색":"#9EC5E8","라이트 블루":"#AFC9F6","민트":"#AEE4D4","틸(청록)":"#1C8073","그레이지":"#BDB6A6","딥블루":"#0B3A7E","연두색":"#9ED36A"};
 const COLOR_MAP = {"버건디":{perfect:["아이보리","네이비"],safe:["블랙","라이트 그레이"],pro:["베이지","옐로우","그레이지"]},"네이비":{perfect:["화이트","아이보리","라이트 그레이"],safe:["네이비","블랙"],pro:["베이지","카키(올리브)","브라운"]},"미드 그레이":{perfect:["블랙","네이비"],safe:["라이트 그레이","흑청","중청 데님"],pro:["베이지","카키(올리브)"]},"포레스트 그린":{perfect:["라이트 그레이","아이보리"],safe:["네이비","블랙"],pro:["베이지","브라운"]},"화이트":{perfect:["네이비","블랙","그레이"],safe:["라이트 그레이","중청 데님","흑청"],pro:["카키(올리브)","브라운","베이지"]},"소라색":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["베이지","카키(올리브)"]},"브라운":{perfect:["아이보리","라이트 그레이"],safe:["네이비","블랙"],pro:["카키(올리브)","그레이지"]},"차콜":{perfect:["카키(올리브)","라이트 그레이"],safe:["블랙","네이비","그레이지"],pro:["베이지","브라운"]},"옐로우":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["브라운","아이보리"]},"블랙":{perfect:["블랙","차콜","라이트 그레이"],safe:["네이비","흑청"],pro:["베이지","브라운","카키(올리브)"]},"연두색":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["베이지"]},"딥블루":{perfect:["아이보리","라이트 그레이"],safe:["블랙","네이비"],pro:["베이지"]},"레드":{perfect:["네이비"],safe:["블랙","베이지"],pro:["그린","카키(올리브)"]},"베이지":{perfect:["네이비","블랙"],safe:["라이트 그레이","중청 데님"],pro:["브라운","카키(올리브)"]},"핑크":{perfect:["그레이","네이비"],safe:["블랙","라이트 그레이"],pro:["베이지","카키(올리브)"]},"아이보리":{perfect:["네이비","차콜"],safe:["블랙","그레이"],pro:["브라운","올리브"]},"퍼플":{perfect:["베이지","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)","아이보리"]},"카키(올리브)":{perfect:["블랙","아이보리"],safe:["흑청","라이트 그레이"],pro:["네이비","브라운","버건디"]},"중청 데님":{perfect:["화이트","아이보리","그레이"],safe:["블랙","네이비"],pro:["베이지"]},"오렌지":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)"]},"버터 옐로":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["브라운"]},"세이지 그린":{perfect:["아이보리","라이트 그레이"],safe:["네이비","블랙"],pro:["베이지","브라운"]},"라일락":{perfect:["그레이","네이비"],safe:["블랙","라이트 그레이"],pro:["베이지"]},"코랄":{perfect:["화이트","그레이"],safe:["네이비","블랙"],pro:["베이지","카키(올리브)"]},"테라코타":{perfect:["아이보리","그레이"],safe:["네이비","블랙"],pro:["베이지"]},"모카":{perfect:["아이보리","라이트 그레이"],safe:["블랙","네이비"],pro:["카키(올리브)","틸(청록)"]},"그레이지":{perfect:["블랙","차콜"],safe:["네이비","브라운"],pro:["민트","핑크"]},"슬레이트 블루":{perfect:["베이지","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)"]},"틸(청록)":{perfect:["베이지","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)"]},"민트":{perfect:["네이비","그레이"],safe:["차콜","블랙"],pro:["베이지","브라운"]},"라이트 그레이":{perfect:["블랙","네이비"],safe:["중청 데님","흑청"],pro:["베이지","카키(올리브)"]},"흑청":{perfect:["화이트","아이보리"],safe:["블랙","라이트 그레이"],pro:["베이지","카키(올리브)"]},"크림":{perfect:["네이비","차콜"],safe:["블랙","그레이"],pro:["브라운","올리브"]},"그레이":{perfect:["블랙","네이비"],safe:["라이트 그레이","흑청","중청 데님"],pro:["베이지","카키(올리브)"]},"라이트 블루":{perfect:["네이비","화이트"],safe:["블랙","그레이"],pro:["베이지","올리브"]},"올리브":{perfect:["블랙","아이보리"],safe:["네이비","차콜"],pro:["버건디","레드"]}};
 
-/* ===== 상태 저장 ===== */
+/* ===== 상태 저장/유틸 ===== */
 const LS = { fav:"favColors.v1", recent:"recentColor.v1" };
 const $ = s=>document.querySelector(s);
 function gLS(k,f){ try{const v=localStorage.getItem(k); return v?JSON.parse(v):f;}catch{return f;}}
 function sLS(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch{} }
-
-/* ===== 이름 목록/핵심5/나머지 ===== */
 const NAMES = Object.keys(COLOR_MAP).sort((a,b)=>a.localeCompare(b,'ko'));
 const CORE = ["블랙","차콜","버건디","올리브","화이트"];
 const REST = NAMES.filter(n=>!CORE.includes(n));
-
-function setDatalist(){
-  $('#colorList').innerHTML = NAMES.map(n => `<option value="${n}"></option>`).join('');
-}
-
-/* ===== 즐겨찾기 ===== */
+function setDatalist(){ $('#colorList').innerHTML = NAMES.map(n => `<option value="${n}"></option>`).join(''); }
 function favSet(){ return new Set(gLS(LS.fav, [])); }
 function isFav(n){ return favSet().has(n); }
 function toggleFav(n){ const s=favSet(); s.has(n)?s.delete(n):s.add(n); sLS(LS.fav,[...s]); renderAll(); }
 
-/* ===== 카드 생성 ===== */
+/* ===== 카드 ===== */
 function makeCard(name){
   const card = document.createElement('div');
-  card.className = 'card';
-  card.dataset.name = name;
+  card.className = 'card'; card.dataset.name = name;
   card.innerHTML = `
     <span class="star ${isFav(name)?'fav':''}">${isFav(name)?'★':'☆'}</span>
     <div class="row">
       <span class="swatch" style="background:${COLOR_HEX[name]||'#9aa3b2'}" title="${name}"></span>
       <span class="name">${name}</span>
     </div>`;
-  
-  card.querySelector('.star').addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleFav(name);
-  });
-
+  card.querySelector('.star').addEventListener('click', (e) => { e.stopPropagation(); toggleFav(name); });
   card.addEventListener('click', () => {
     $('#topInput').value = name;
     showMatch(name);
-    sLS(LS.recent, name);
-    updateRecent();
-
+    sLS(LS.recent, name); updateRecent();
     if (CORE.includes(name)) return;
-    const more = $('#moreColors');
-    if (more && more.open) more.removeAttribute('open');
-    else $('#allSection')?.removeAttribute('open');
+    const more = $('#moreColors'); if (more && more.open) more.removeAttribute('open'); else $('#allSection')?.removeAttribute('open');
   });
   return card;
 }
 
-/* ===== 렌더링 ===== */
+/* ===== 렌더 ===== */
 function renderAll(){
-  // 즐겨찾기
   const fset = favSet();
   const favArr = NAMES.filter(n => fset.has(n));
   const favSec = $('#favSection');
@@ -160,34 +143,41 @@ function renderAll(){
     $('#favCount').textContent = `${favArr.length}개`;
     const favGrid = $('#favGrid'); favGrid.innerHTML = '';
     favArr.forEach(n => favGrid.appendChild(makeCard(n)));
-  } else {
-    favSec.style.display = 'none';
-  }
+  } else { favSec.style.display = 'none'; }
 
-  // 핵심 및 나머지
-  const coreGrid = $('#coreGrid'); coreGrid.innerHTML = '';
-  CORE.forEach(n => coreGrid.appendChild(makeCard(n)));
-  
-  const restGrid = $('#restGrid'); restGrid.innerHTML = '';
-  REST.forEach(n => restGrid.appendChild(makeCard(n)));
-  $('#moreCount').textContent = `${REST.length}개`;
-  $('#allCount').textContent = `총 ${NAMES.length}개`;
+  const coreGrid = $('#coreGrid'); coreGrid.innerHTML = ''; CORE.forEach(n => coreGrid.appendChild(makeCard(n)));
+  const restGrid = $('#restGrid'); restGrid.innerHTML = ''; REST.forEach(n => restGrid.appendChild(makeCard(n)));
+  $('#moreCount').textContent = `${REST.length}개`; $('#allCount').textContent = `총 ${NAMES.length}개`;
+}
+
+/* ===== 링크 유틸 ===== */
+function q(s){ return encodeURIComponent(String(s||'').replace(/\s+/g,' ').trim()); }
+function updateTopMusinsaLink(topColorName){
+  const el = document.getElementById('musinsaTopLink'); const wrap = document.getElementById('musinsaTopWrap');
+  if(!el||!wrap) return;
+  if(!topColorName){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const query = `${topColorName} 셔츠`; const url = `https://www.musinsa.com/search/musinsa?q=${q(query)}`;
+  el.textContent = `‘${topColorName}’ 색 상의 검색하기`; el.href = url;
+}
+function updateBottomMusinsaLink(bottomColorName){
+  const el = document.getElementById('musinsaBottomLink'); const wrap = document.getElementById('musinsaBottomWrap');
+  if(!el||!wrap) return;
+  if(!bottomColorName){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const query = `${bottomColorName} 바지`; const url = `https://www.musinsa.com/search/musinsa?q=${q(query)}`;
+  el.textContent = `‘${bottomColorName}’ 색 하의 검색하기`; el.href = url;
 }
 
 /* ===== 결과 표시 ===== */
 function showMatch(name){
   const data = COLOR_MAP[name];
   const area = $('#resultArea');
-  if (!data) {
-    area.innerHTML = `<p style="color:#93a0ba">등록되지 않은 색상: "${name}"</p>`;
-    return;
-  }
-  
+  if (!data) { area.innerHTML = `<p style="color:#93a0ba">등록되지 않은 색상: "${name}"</p>`; return; }
   const topHex = COLOR_HEX[name] || '#999';
   const firstBottomName = (data.perfect && data.perfect[0]) || (data.safe && data.safe[0]) || '미선택';
   const firstBottomHex = COLOR_HEX[firstBottomName] || '#555';
 
-  // [개선] 템플릿 리터럴로 UI 구조 생성
   area.innerHTML = `
     <div class="preview-wrap">
       <div class="preview">
@@ -202,8 +192,20 @@ function showMatch(name){
       </div>
     </div>
     <div id="recoGrid" class="grid"></div>
-    <!-- 무신사 색상 검색 링크 영역 -->
-    <div id="musinsaResult" class="panel" style="margin-top:12px; display:none;"></div>`;
+
+    <div class="panel" id="musinsaTopWrap" style="margin-top:12px; display:none;">
+      <div class="sec-head"><div class="tag">무신사 링크</div><div class="muted">상의</div></div>
+      <p style="margin:2px 0 0 0; padding:0 6px 6px 6px;">
+        <a id="musinsaTopLink" href="#" target="_blank" rel="noopener" style="color:var(--safe); text-decoration:underline;">-</a>
+      </p>
+    </div>
+
+    <div class="panel" id="musinsaBottomWrap" style="margin-top:8px; display:none;">
+      <div class="sec-head"><div class="tag">무신사 링크</div><div class="muted">하의</div></div>
+      <p style="margin:2px 0 0 0; padding:0 6px 6px 6px;">
+        <a id="musinsaBottomLink" href="#" target="_blank" rel="noopener" style="color:var(--safe); text-decoration:underline;">-</a>
+      </p>
+    </div>`;
 
   const recoGrid = $('#recoGrid');
   const createSection = (label, cls, arr) => {
@@ -212,100 +214,57 @@ function showMatch(name){
       <div class="panel">
         <div class="sec-head"><div class="tag ${cls}">${label}</div><div class="muted">${arr.length}개</div></div>
         <div class="chips">
-          ${arr.map(c => `
+          ${(arr||[]).map(c => `
             <div class="chip" data-color="${c}">
               <span class="swatch" style="background:${COLOR_HEX[c] || '#9aa3b2'}"></span>${c}
             </div>`).join('')}
         </div>
       </div>`;
   };
-  
   recoGrid.innerHTML = createSection('찰떡','ok',data.perfect) +
                        createSection('무난','safe',data.safe) +
                        createSection('고수','pro',data.pro);
 
-  // 추천 하의 첫 번째 색상에 대한 무신사 링크 업데이트
-  updateMusinsaLink(firstBottomName);
+  // 초기 링크 설정
+  updateTopMusinsaLink(name);
+  updateBottomMusinsaLink(firstBottomName);
 }
 
-/* ===== [신규] 무신사 링크 업데이트 ===== */
-function updateMusinsaLink(colorName){
-  const mEl = document.getElementById('musinsaResult');
-  if (!mEl) return;
-  if (!colorName || colorName === '미선택') {
-    mEl.style.display = 'none';
-    mEl.innerHTML = '';
-    return;
-  }
-  // 검색어: 색상 + " 바지" (예: 네이비 바지)
-  const query = encodeURIComponent(colorName + ' 바지');
-  const link = `https://www.musinsa.com/search/musinsa?q=${query}`;
-  mEl.style.display = 'block';
-  mEl.innerHTML = `
-    <div class="sec-head"><div class="tag">무신사 링크</div></div>
-    <p><a href="${link}" target="_blank" style="color:var(--safe); text-decoration:underline;">'${colorName}' 색 하의 검색하기</a></p>`;
-}
+function updateRecent(){ const r = gLS(LS.recent, null); $('#recentHint').textContent = '최근 선택: ' + (r || '-'); }
 
-function updateRecent(){
-  const r = gLS(LS.recent, null);
-  $('#recentHint').textContent = '최근 선택: ' + (r || '-');
-}
-
-/* ===== 초기화 & 이벤트 리스너 ===== */
+/* ===== 초기화/이벤트 ===== */
 function resetAll(){
-  sLS(LS.fav, []);
-  sLS(LS.recent, null);
+  sLS(LS.fav, []); sLS(LS.recent, null);
   $('#topInput').value = '';
   $('#resultArea').innerHTML = '<p style="color:#93a0ba">💡 상의 색을 선택하면 하의 추천이 여기에 표시됩니다.</p>';
-  renderAll();
-  updateRecent();
-  $('#allSection').setAttribute('open','');
-  $('#moreColors').removeAttribute('open');
+  renderAll(); updateRecent(); $('#allSection').setAttribute('open',''); $('#moreColors').removeAttribute('open');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  setDatalist();
-  renderAll();
-  updateRecent();
-
+  setDatalist(); renderAll(); updateRecent();
   const recent = gLS(LS.recent, null);
-  if (recent && COLOR_MAP[recent]) {
-    $('#topInput').value = recent;
-    showMatch(recent);
-  }
+  if (recent && COLOR_MAP[recent]) { $('#topInput').value = recent; showMatch(recent); }
 
   $('#matchBtn').addEventListener('click', () => {
-    const v = $('#topInput').value.trim();
-    if (!v) { $('#topInput').focus(); return; }
-    showMatch(v);
-    sLS(LS.recent, v);
-    updateRecent();
-
-    const more = $('#moreColors');
-    if (more && more.open) more.removeAttribute('open');
-    else $('#allSection')?.removeAttribute('open');
+    const v = $('#topInput').value.trim(); if (!v) { $('#topInput').focus(); return; }
+    showMatch(v); sLS(LS.recent, v); updateRecent();
+    const more = $('#moreColors'); if (more && more.open) more.removeAttribute('open'); else $('#allSection')?.removeAttribute('open');
   });
 
   $('#topInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      $('#matchBtn').click();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); $('#matchBtn').click(); }
   });
 
   $('#resetBtn').addEventListener('click', resetAll);
 
-  // [개선] 이벤트 위임: 하의 색상 칩 클릭 시 미리보기 업데이트
+  // 하의 칩 클릭 시 미리보기 + 하의 링크 갱신
   $('#resultArea').addEventListener('click', (e) => {
-    const chip = e.target.closest('.chip');
-    if (!chip) return;
-
+    const chip = e.target.closest('.chip'); if (!chip) return;
     const bottomColorName = chip.dataset.color;
     if (bottomColorName) {
-      $('#previewBottom').style.backgroundColor = COLOR_HEX[bottomColorName] || '#555';
-      $('#bottomColorName').textContent = bottomColorName;
-      // 선택된 하의 색상에 대한 무신사 링크 업데이트
-      updateMusinsaLink(bottomColorName);
+      document.getElementById('previewBottom').style.backgroundColor = COLOR_HEX[bottomColorName] || '#555';
+      document.getElementById('bottomColorName').textContent = bottomColorName;
+      updateBottomMusinsaLink(bottomColorName);
     }
   });
 });
