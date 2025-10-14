@@ -201,7 +201,9 @@ function showMatch(name){
         <div id="bottomColorName" class="preview-color-name">${firstBottomName}</div>
       </div>
     </div>
-    <div id="recoGrid" class="grid"></div>`;
+    <div id="recoGrid" class="grid"></div>
+    <!-- 무신사 색상 검색 링크 영역 -->
+    <div id="musinsaResult" class="panel" style="margin-top:12px; display:none;"></div>`;
 
   const recoGrid = $('#recoGrid');
   const createSection = (label, cls, arr) => {
@@ -221,6 +223,27 @@ function showMatch(name){
   recoGrid.innerHTML = createSection('찰떡','ok',data.perfect) +
                        createSection('무난','safe',data.safe) +
                        createSection('고수','pro',data.pro);
+
+  // 추천 하의 첫 번째 색상에 대한 무신사 링크 업데이트
+  updateMusinsaLink(firstBottomName);
+}
+
+/* ===== [신규] 무신사 링크 업데이트 ===== */
+function updateMusinsaLink(colorName){
+  const mEl = document.getElementById('musinsaResult');
+  if (!mEl) return;
+  if (!colorName || colorName === '미선택') {
+    mEl.style.display = 'none';
+    mEl.innerHTML = '';
+    return;
+  }
+  // 검색어: 색상 + " 바지" (예: 네이비 바지)
+  const query = encodeURIComponent(colorName + ' 바지');
+  const link = `https://www.musinsa.com/search/musinsa?q=${query}`;
+  mEl.style.display = 'block';
+  mEl.innerHTML = `
+    <div class="sec-head"><div class="tag">무신사 링크</div></div>
+    <p><a href="${link}" target="_blank" style="color:var(--safe); text-decoration:underline;">'${colorName}' 색 하의 검색하기</a></p>`;
 }
 
 function updateRecent(){
@@ -281,6 +304,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bottomColorName) {
       $('#previewBottom').style.backgroundColor = COLOR_HEX[bottomColorName] || '#555';
       $('#bottomColorName').textContent = bottomColorName;
+      // 선택된 하의 색상에 대한 무신사 링크 업데이트
+      updateMusinsaLink(bottomColorName);
     }
   });
 });
