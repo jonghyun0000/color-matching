@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>상·하의 컬러 매칭 · 핵심5 + 더보기</title>
+<title>Matcher.AI · (AI Ver.) 컬러 매칭 (무드·스타일)</title>
 <style>
   :root{
     --bg:#0f1115; --card:#151924; --text:#e8ecf1; --muted:#93a0ba; --border:#212635;
-    --chip:#1e2330; --ok:#66d19e; --safe:#9db2ff; --pro:#ffcf6e;
+    --chip:#1e2330; --ok:#66d19e; --safe:#9db2ff; --pro:#ffcf6e; --accent:#8abdff;
   }
   *{box-sizing:border-box}
   body{margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  .wrap{max-width:980px; margin:24px auto; padding:16px}
+  a{color:var(--accent)}
+  .wrap{max-width:1100px; margin:24px auto; padding:16px}
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-  .title{font-weight:800; font-size:20px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between}
+  .title{font-weight:800; font-size:22px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between}
   .panel,.section{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px}
   .btn{border:1px solid var(--border); background:#0e1119; color:#e8ecf1; padding:8px 10px; border-radius:10px; cursor:pointer; transition:background .2s}
   .btn:hover{background:var(--border)}
@@ -27,6 +28,7 @@
   .chips{display:flex; flex-wrap:wrap; gap:8px}
   .chip{display:inline-flex; align-items:center; gap:8px; background:var(--chip); border:1px solid var(--border); padding:8px 10px; border-radius:999px; cursor:pointer; transition:background .2s}
   .chip:hover{background:var(--border)}
+  .muted{color:var(--muted); font-size:13px}
   .sec-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
   .ok{color:var(--ok)} .safe{color:var(--safe)} .pro{color:var(--pro)}
   details.section{padding:0}
@@ -36,122 +38,310 @@
   .chev{transition:transform .15s ease; opacity:.9}
   details[open] .chev{transform:rotate(90deg)}
 
+  /* layout */
+  .cols{display:grid; grid-template-columns: 320px 1fr; gap:12px}
+  @media (max-width: 900px){ .cols{grid-template-columns:1fr} }
+
   /* preview */
   .preview-wrap{display:flex; gap:10px; margin-bottom:12px; align-items:stretch}
-  .preview{flex:1; min-width:80px; background:var(--bg); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; padding:4px}
+  .preview{flex:1; min-width:100px; background:var(--bg); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; padding:4px}
   .preview-top, .preview-bottom{flex:1; border-radius:6px; transition:background-color .3s ease}
   .preview-top{background:#444; margin-bottom:3px}
   .preview-bottom{background:#555}
   .preview-info{flex:2; display:flex; flex-direction:column; justify-content:center}
   .preview-label{font-size:13px; color:var(--muted); margin-bottom:4px}
   .preview-color-name{font-size:16px; font-weight:700}
+  .small{font-size:12px}
+  .mode-toggle .chip.active{outline:2px solid var(--accent)}
+
+  /* --- AI 입력 --- */
+  #textPrompt{
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:10px; border-radius:10px; margin-top:4px;
+  }
+  #aiBtn{
+    width:100%; background:var(--accent); color:var(--bg); font-weight:700;
+    font-size:15px; padding:10px; margin-top:8px; border-color:var(--accent);
+  }
+  #aiBtn:hover{background:#a2c4ff}
+  
+  /* --- AI 추천 결과 --- */
+  .chip-reco{
+    width:100%; padding:10px 12px; border-radius:10px; align-items:flex-start;
+    flex-direction:column; gap:6px; cursor:pointer;
+  }
+  .chip-reco .row{ flex-wrap:nowrap; }
+  .chip-reco .reasoning{
+    font-size:13px; color:var(--muted); margin:0; padding-left:26px;
+    line-height:1.5; white-space:normal;
+  }
+
+  /* --- 로딩 오버레이 --- */
+  #loadingOverlay{
+    position:fixed; inset:0; background:#00000099; backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:999;
+  }
+  #loadingOverlay::after{
+    content:''; display:block; width:40px; height:40px;
+    border:4px solid var(--border); border-top-color:var(--accent);
+    border-radius:50%; animation:spin 1s linear infinite;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
 </style>
 </head>
 <body>
+<div id="loadingOverlay"></div>
+
 <div class="wrap">
   <div class="title">
-    <div>상·하의 컬러 매칭</div>
-    <button class="btn" id="resetBtn" aria-label="초기화">초기화</button>
-  </div>
-
-  <!-- 즐겨찾기 -->
-  <div id="favSection" class="section" style="display:none; margin-bottom:12px;">
-    <div class="sec-head"><div class="tag">★ 즐겨찾기</div><div id="favCount" class="muted"></div></div>
-    <div id="favGrid" class="grid"></div>
-  </div>
-
-  <!-- 전체 색상 -->
-  <details id="allSection" class="section" open>
-    <summary>
-      <div class="sum-left"><span class="chev">▶</span><span class="tag">모든 상의 색</span></div>
-      <div id="allCount" class="muted">0개</div>
-    </summary>
-    <div style="padding:12px;">
-      <div class="sec-head" style="margin-top:2px;"><div class="tag">핵심 5</div></div>
-      <div id="coreGrid" class="grid" style="margin-bottom:8px;"></div>
-      <details id="moreColors" class="section" style="margin-top:8px;">
-        <summary>
-          <div class="sum-left"><span class="chev">▶</span><span class="tag">더보기</span></div>
-          <div id="moreCount" class="muted">0개</div>
-        </summary>
-        <div style="padding:12px 12px 0 12px;"><div id="restGrid" class="grid"></div></div>
-      </details>
+    <div>Matcher.AI · (AI Ver.) 컬러 매칭 (무드·스타일)</div>
+    <div class="row">
+      <button class="btn" id="uxBtn" aria-label="UX 가이드">UX 가이드</button>
+      <button class="btn" id="resetBtn" aria-label="초기화">초기화</button>
     </div>
-  </details>
+  </div>
 
-  <!-- 결과 -->
-  <div id="resultSection" class="section" style="margin-top:12px;">
-    <div class="sec-head"><div class="tag">추천 하의</div><div id="recentHint" class="muted">최근 선택: -</div></div>
-    <div id="resultArea"><p style="color:#93a0ba">💡 상의 카드를 클릭하면 하의 추천이 여기에 표시됩니다.</p></div>
+  <div class="cols">
+    <div class="panel">
+      <div class="sec-head"><div class="tag">1) 분위기(무드)</div><div id="moodHint" class="muted">-</div></div>
+      <div id="moodChips" class="chips"></div>
+      <div class="sec-head" style="margin-top:10px"><div class="tag">2) 패션 스타일</div><div id="styleHint" class="muted">-</div></div>
+      <div id="styleChips" class="chips"></div>
+      <div class="sec-head" style="margin-top:10px"><div class="tag">3) 추천 모드</div><div class="muted">양방향</div></div>
+      <div class="chips mode-toggle" id="modeChips"></div>
+      
+      <div class="sec-head" style="margin-top:10px"><div class="tag">4) AI에 직접 요청</div></div>
+      <input id="textPrompt" type="text" placeholder="예: 면접용, 데이트룩, 청바지 코디" />
+      <button id="aiBtn" class="btn">AI 추천 받기</button>
+      
+      <p class="muted small" style="margin-top:12px">💡 위 태그/모드/텍스트를 조합하여 AI가 추천을 생성합니다. 색상 카드를 클릭해도 AI 추천이 동작합니다.</p>
+    </div>
+
+    <div class="section">
+      <details id="paletteSection" class="section" open>
+        <summary>
+          <div class="sum-left"><span class="chev">▶</span><span class="tag" id="paletteTitle">모든 상의 색</span></div>
+          <div id="allCount" class="muted">0개</div>
+        </summary>
+        <div style="padding:12px;">
+          <div class="sec-head" style="margin-top:2px;"><div class="tag">핵심 5</div></div>
+          <div id="coreGrid" class="grid" style="margin-bottom:8px;"></div>
+          <details id="moreColors" class="section" style="margin-top:8px;">
+            <summary>
+              <div class="sum-left"><span class="chev">▶</span><span class="tag">더보기</span></div>
+              <div id="moreCount" class="muted">0개</div>
+            </summary>
+            <div style="padding:12px 12px 0 12px;"><div id="restGrid" class="grid"></div></div>
+          </details>
+        </div>
+      </details>
+
+      <div id="resultSection" class="section" style="margin-top:12px;">
+        <div class="sec-head"><div class="tag" id="resultTitle">추천 하의</div><div id="recentHint" class="muted">최근 선택: -</div></div>
+        <div id="resultArea"><p style="color:#93a0ba">💡 색 카드를 클릭하거나 AI에 요청하면 추천이 여기에 표시됩니다.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="uxModal" style="display:none; position:fixed; inset:0; background:#0008; backdrop-filter: blur(2px); align-items:center; justify-content:center;">
+  <div style="width:min(760px,90vw); max-height:80vh; overflow:auto" class="panel">
+    <div class="sec-head"><div class="tag">UX 가이드 (AI Ver.)</div><button class="btn" id="uxClose">닫기</button></div>
+    <ol style="margin:0 0 6px 18px; line-height:1.6">
+      <li><b>무드</b>와 <b>스타일</b>을 먼저 선택합니다.</li>
+      <li>AI에게 구체적인 상황(<b>텍스트</b>)을 입력할 수 있습니다. (예: "데이트룩", "청바지 코디")</li>
+      <li><b>모드</b>(상의→하의, 하의→상의)를 정합니다. (텍스트 입력 시에도 모드가 적용됨)</li>
+      <li><b>색상 카드를 클릭</b>하거나, <b>"AI 추천 받기" 버튼</b>을 누릅니다.</li>
+      <li>"데이트룩" 같은 상황 요청 시, AI가 상/하의 **조합**을 추천합니다.</li>
+      <li>추천 칩을 클릭하면 미리보기에 반영되며, 무신사 링크도 함께 제공됩니다.</li>
+    </ol>
+    <p class="muted small">※ 본 버전은 실제 AI API를 호출하지 않고, <b>AI 응답을 시뮬레이션(Mock)</b>합니다.</p>
   </div>
 </div>
 
 <script>
-/* ===== 데이터 ===== */
+/* ===== 기본 데이터 (색상) ===== */
 const COLOR_HEX = {"버건디":"#7A1F2B","네이비":"#0E2C54","미드 그레이":"#8B8F98","포레스트 그린":"#2F5D50","화이트":"#FFFFFF","아이보리":"#F5F0E6","크림":"#FAF3E5","베이지":"#D9C7A1","차콜":"#2B2F39","블랙":"#000000","브라운":"#6E4C3A","모카":"#7B5B48","카키(올리브)":"#6C7A3C","올리브":"#6C7A3C","그린":"#2A8A4B","세이지 그린":"#8AA391","라이트 그레이":"#D7DBE0","그레이":"#8B8F98","슬레이트 블루":"#5B6E8A","중청 데님":"#274D7E","흑청":"#31343C","라일락":"#B79BCF","퍼플":"#6441A5","핑크":"#E7A8B3","코랄":"#FF7F6E","테라코타":"#C25A3A","레드":"#E53935","오렌지":"#F78C2F","옐로우":"#FACF37","버터 옐로":"#F2E29D","소라색":"#9EC5E8","라이트 블루":"#AFC9F6","민트":"#AEE4D4","틸(청록)":"#1C8073","그레이지":"#BDB6A6","딥블루":"#0B3A7E","연두색":"#9ED36A"};
 
-/* ===== BARUSA 표 반영 COLOR_MAP (4개 수정 포함) ===== */
-const COLOR_MAP = {
-"버건디":{perfect:["아이보리","네이비"],safe:["블랙","라이트 그레이"],pro:["베이지","옐로우","그레이지"]},
-"네이비":{perfect:["화이트","아이보리","라이트 그레이"],safe:["네이비","블랙"],pro:["베이지","카키(올리브)","브라운"]},
-"미드 그레이":{perfect:["블랙","네이비"],safe:["라이트 그레이","흑청","중청 데님"],pro:["베이지","카키(올리브)"]},
-"포레스트 그린":{perfect:["라이트 그레이","아이보리"],safe:["네이비","블랙"],pro:["베이지","브라운"]},
-
-/* ✅ 수정1: 화이트 찰떡을 네이비·카키(올리브)로 */
-"화이트":{perfect:["네이비","카키(올리브)"],safe:["블랙","라이트 그레이"],pro:["브라운","베이지"]},
-
-/* ✅ 수정2: 소라색 무난에 그레이 반영 */
-"소라색":{perfect:["네이비","그레이"],safe:["블랙","그레이"],pro:["베이지","카키(올리브)"]},
-
-"브라운":{perfect:["아이보리","라이트 그레이"],safe:["네이비","블랙"],pro:["카키(올리브)","그레이지"]},
-"차콜":{perfect:["카키(올리브)","라이트 그레이"],safe:["블랙","네이비","그레이지"],pro:["베이지","브라운"]},
-
-/* ✅ 수정3: 옐로우 고수에 블랙 추가 */
-"옐로우":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["브라운","블랙"]},
-
-"블랙":{perfect:["블랙","차콜","라이트 그레이"],safe:["네이비","흑청"],pro:["베이지","브라운","카키(올리브)"]},
-"연두색":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["베이지"]},
-"딥블루":{perfect:["아이보리","라이트 그레이"],safe:["블랙","네이비"],pro:["베이지"]},
-"레드":{perfect:["네이비"],safe:["블랙","베이지"],pro:["그린","카키(올리브)"]},
-"베이지":{perfect:["네이비","블랙"],safe:["라이트 그레이","중청 데님"],pro:["브라운","카키(올리브)"]},
-"핑크":{perfect:["그레이","네이비"],safe:["블랙","라이트 그레이"],pro:["베이지","카키(올리브)"]},
-"아이보리":{perfect:["네이비","차콜"],safe:["블랙","그레이"],pro:["브라운","올리브"]},
-"퍼플":{perfect:["베이지","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)","아이보리"]},
-"카키(올리브)":{perfect:["블랙","아이보리"],safe:["흑청","라이트 그레이"],pro:["네이비","브라운","버건디"]},
-"중청 데님":{perfect:["화이트","아이보리","그레이"],safe:["블랙","네이비"],pro:["베이지"]},
-"오렌지":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)"]},
-"버터 옐로":{perfect:["네이비","그레이"],safe:["블랙","라이트 그레이"],pro:["브라운"]},
-"세이지 그린":{perfect:["아이보리","라이트 그레이"],safe:["네이비","블랙"],pro:["베이지","브라운"]},
-"라일락":{perfect:["그레이","네이비"],safe:["블랙","라이트 그레이"],pro:["베이지"]},
-
-/* ✅ 수정4: 모카 고수 → 베이지·카키(올리브) */
-"모카":{perfect:["아이보리","라이트 그레이"],safe:["블랙","네이비"],pro:["베이지","카키(올리브)"]},
-
-"그레이지":{perfect:["블랙","차콜"],safe:["네이비","브라운"],pro:["민트","핑크"]},
-"슬레이트 블루":{perfect:["베이지","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)"]},
-"틸(청록)":{perfect:["베이지","그레이"],safe:["블랙","라이트 그레이"],pro:["카키(올리브)"]},
-"민트":{perfect:["네이비","그레이"],safe:["차콜","블랙"],pro:["베이지","브라운"]},
-"라이트 그레이":{perfect:["블랙","네이비"],safe:["중청 데님","흑청"],pro:["베이지","카키(올리브)"]},
-"흑청":{perfect:["화이트","아이보리"],safe:["블랙","라이트 그레이"],pro:["베이지","카키(올리브)"]},
-"크림":{perfect:["네이비","차콜"],safe:["블랙","그레이"],pro:["브라운","올리브"]},
-"그레이":{perfect:["블랙","네이비"],safe:["라이트 그레이","흑청","중청 데님"],pro:["베이지","카키(올리브)"]},
-"라이트 블루":{perfect:["네이비","화이트"],safe:["블랙","그레이"],pro:["베이지","올리브"]},
-"올리브":{perfect:["블랙","아이보리"],safe:["네이비","차콜"],pro:["버건디","레드"]}
-};
+/* ===== 무드/스타일 힌트 세트 (AI에 컨텍스트로 제공) ===== */
+const MOODS = [
+  {id:'warm', label:'따뜻한', colors:[]}, 
+  {id:'cool', label:'차가운', colors:[]},
+  {id:'neutral', label:'중립', colors:[]}
+];
+const STYLES = [
+  {id:'casual', label:'캐주얼', colors:[]},
+  {id:'street', label:'스트릿', colors:[]},
+  {id:'dandy', label:'댄디', colors:[]},
+  {id:'retro', label:'레트로', colors:[]}
+];
 
 /* ===== 상태 저장/유틸 ===== */
-const LS = { fav:"favColors.v1", recent:"recentColor.v1" };
+const LS = { fav:"favColors.v2", recent:"recentColor.v2", mode:"mode.v1", mood:"mood.v1", style:"style.v1" };
 const $ = s=>document.querySelector(s);
 function gLS(k,f){ try{const v=localStorage.getItem(k); return v?JSON.parse(v):f;}catch{return f;}}
 function sLS(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch{} }
-const NAMES = Object.keys(COLOR_MAP).sort((a,b)=>a.localeCompare(b,'ko'));
+
+/* 이름/리스트 (팔레트 표시에만 사용) */
+const NAMES = Object.keys(COLOR_HEX).sort((a,b)=>a.localeCompare(b,'ko'));
 const CORE = ["블랙","차콜","버건디","올리브","화이트"];
 const REST = NAMES.filter(n=>!CORE.includes(n));
+
 function favSet(){ return new Set(gLS(LS.fav, [])); }
 function isFav(n){ return favSet().has(n); }
-function toggleFav(n){ const s=favSet(); s.has(n)?s.delete(n):s.add(n); sLS(LS.fav,[...s]); renderAll(); }
+function toggleFav(n){ const s=favSet(); s.has(n)?s.delete(n):s.add(n); sLS(LS.fav,[...s]); renderPalette(); }
 
-/* ===== 카드 ===== */
+/* ===== 신규: AI 추천 로직 (시뮬레이션) ===== */
+
+function showLoading(show) {
+  $('#loadingOverlay').style.display = show ? 'flex' : 'none';
+}
+
+/**
+ * AI API 호출 시뮬레이션 (수정됨)
+ */
+function mockAIApiCall(request) {
+  console.log("AI Request:", request);
+  const { top, bottom, text, mood, style } = request;
+
+  // 1. (신규) 텍스트 전용 상황별 요청 (데이트룩, 면접룩 등)
+  // (request.top, request.bottom이 비어있고 text만 존재할 때)
+  if (text && !top && !bottom) {
+    if (text.includes("데이트룩")) {
+      return {
+        // AI가 상/하의 페어를 제안
+        _suggestedTop: '핑크', // 미리보기용 상의 제안
+        _suggestedBottom: '아이보리', // 미리보기용 하의 제안
+        
+        // 사용자는 다른 '하의' 옵션을 볼 수 있음 (모드가 상의->하의 였다면)
+        // (이 로직은 모드가 하의->상의 였다면 상의 옵션을 반환해야 하나, 데모상 단순화)
+        perfect: [ 
+          { name: '아이보리', reasoning: 'AI 추천: 핑크 상의와 매치하여 로맨틱한 무드를 완성합니다.' }, 
+          { name: '화이트', reasoning: '어떤 파스텔톤 상의와도 어울리는 깔끔한 선택입니다.' } 
+        ],
+        safe: [ 
+          { name: '중청 데님', reasoning: '캐주얼 데이트에 어울리는 편안한 조합입니다.' }, 
+          { name: '베이지', reasoning: '부드러운 톤온톤 룩을 연출합니다.' } 
+        ],
+        pro: [ 
+          { name: '라이트 블루', reasoning: '화사함을 더할 수 있는 조합입니다.' } 
+        ]
+      };
+    }
+    // (다른 텍스트 전용 시나리오... 예: "면접")
+  }
+
+  // 2. 색상 기반 요청 (버건디 상의 예시)
+  if (top === '버건디') {
+    let reasoning_ivory = '버건디의 깊은 색감과 아이보리의 부드러움이 만나 클래식하고 따뜻한 룩을 완성합니다.';
+    if (mood === 'warm') reasoning_ivory += ' (따뜻한 무드 가산점)';
+    if (style === 'dandy') reasoning_ivory += ' (댄디 스타일 가산점)';
+    
+    return {
+      perfect: [ { name: '아이보리', reasoning: reasoning_ivory }, { name: '네이비', reasoning: '어두운 계열의 조합으로 안정감과 신뢰감을 줍니다.' } ],
+      safe: [ { name: '블랙', reasoning: '가장 안전한 조합이지만, 너무 어두워 보일 수 있습니다.' }, { name: '라이트 그레이', reasoning: '버건디를 돋보이게 하는 좋은 배경색입니다.' } ],
+      pro: [ { name: '카키(올리브)', reasoning: '흔하지 않은 조합으로 개성을 드러냅니다.' }, { name: '베이지', reasoning: '아이보리보다 한 톤 다운된 차분함을 연출합니다.' } ]
+    };
+  }
+  
+  // 3. (하의 -> 상의) 예시: 네이비 하의
+  if (bottom === '네이비') {
+     return {
+      perfect: [ { name: '화이트', reasoning: '네이비와 화이트는 실패 없는 마린룩/댄디룩 조합입니다.' }, { name: '아이보리', reasoning: '화이트보다 부드럽고 따뜻한 느낌을 줍니다.' }, ],
+      safe: [ { name: '라이트 그레이', reasoning: '도시적이고 세련된 이미지를 연출합니다.' }, { name: '네이비', reasoning: '톤온톤 매치로 안정감을 줍니다.' } ],
+      pro: [ { name: '옐로우', reasoning: '네이비의 파란색과 보색 대비를 이루어 활기찬 느낌을 줍니다.' }, { name: '버건디', reasoning: '신뢰감과 개성을 동시에 잡는 조합입니다.' } ]
+    };
+  }
+
+  // 4. '청바지'가 '중청 데님'으로 매핑되어 요청된 경우
+  if (bottom === '중청 데님') {
+     return {
+      perfect: [ { name: '화이트', reasoning: `'${text || '청바지'}'(와)과 화이트는 클래식한 조합입니다.` }, { name: '아이보리', reasoning: '부드러운 캐주얼 무드를 연출합니다.' } ],
+      safe: [ { name: '라이트 그레이', reasoning: '톤온톤으로 무난하게 어울립니다.' }, { name: '블랙', reasoning: '시크한 스트릿 무드를 연출합니다.' } ],
+      pro: [ { name: '버건디', reasoning: '데님의 파란색과 대비되어 개성을 표현합니다.' } ]
+    };
+  }
+
+  // 5. 그 외 (기본 Mock 응답)
+  return {
+    perfect: [
+      { name: '아이보리', reasoning: `'${top || bottom}' 항목에 아이보리가 완벽하다고 판단했습니다.` },
+      { name: '네이비', reasoning: `'${top || bottom}' 항목에 네이비가 완벽하다고 판단했습니다.` }
+    ],
+    safe: [ { name: '라이트 그레이', reasoning: '가장 무난한 선택입니다.' }, { name: '블랙', reasoning: '가장 안전한 선택입니다.' } ],
+    pro: [ { name: '카키(올리브)', reasoning: '개성을 표현하기 좋은 색상입니다.' } ]
+  };
+}
+
+
+/**
+ * AI 추천을 요청하고 결과를 표시하는 메인 함수
+ */
+async function getAndRenderAIRecommendation(request) {
+  showLoading(true);
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
+    const aiResponse = mockAIApiCall(request);
+    
+    // 결과 렌더링
+    renderAIResult(request, aiResponse);
+  } catch (err) {
+    console.error("AI 추천 실패:", err);
+    $('#resultArea').innerHTML = `<p style="color:var(--pro)">AI 추천을 받아오는 데 실패했습니다.</p>`;
+  } finally {
+    showLoading(false);
+  }
+}
+
+
+/* ===== UI 빌딩 (기존과 동일) ===== */
+function chip(label, id, group){
+  const el = document.createElement('div');
+  el.className = 'chip'; el.dataset.id = id; el.dataset.group = group; el.textContent = label;
+  return el;
+}
+
+function buildChips(){
+  const moodWrap = $('#moodChips'); moodWrap.innerHTML='';
+  MOODS.forEach(m=> moodWrap.appendChild(chip(m.label, m.id, 'mood')));
+  const styleWrap = $('#styleChips'); styleWrap.innerHTML='';
+  STYLES.forEach(s=> styleWrap.appendChild(chip(s.label, s.id, 'style')));
+  const modeWrap = $('#modeChips'); modeWrap.innerHTML='';
+  [
+    {id:'top2bottom', label:'상의 → 하의'},
+    {id:'bottom2top', label:'하의 → 상의'}
+  ].forEach(m=> modeWrap.appendChild(chip(m.label, m.id, 'mode')));
+
+  const savedMood = gLS(LS.mood, 'neutral'); activateChip('mood', savedMood);
+  const savedStyle = gLS(LS.style, null); if(savedStyle) activateChip('style', savedStyle);
+  const savedMode = gLS(LS.mode, 'top2bottom'); activateChip('mode', savedMode);
+  updateHints();
+}
+
+function activateChip(group, id){
+  document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(c=>{
+    const active = c.dataset.id===id;
+    c.classList.toggle('active', active);
+    c.style.outline = active? '2px solid var(--accent)' : '';
+  });
+  if(group==='mood') sLS(LS.mood, id);
+  if(group==='style') sLS(LS.style, id);
+  if(group==='mode') sLS(LS.mode, id), updateModeTitles();
+}
+
+function current(group){
+  const act = document.querySelector(`.chip[data-group="${group}"].active`);
+  return act? act.dataset.id : (group==='mood'?'neutral':null);
+}
+
+function updateHints(){
+  const m = current('mood'); const s = current('style');
+  $('#moodHint').textContent = m? MOODS.find(x=>x.id===m).label : '-';
+  $('#styleHint').textContent = s? STYLES.find(x=>x.id===s).label : '-';
+}
+
+/* 팔레트 카드 (기존과 동일) */
 function makeCard(name){
   const card = document.createElement('div');
   card.className = 'card'; card.dataset.name = name;
@@ -162,74 +352,114 @@ function makeCard(name){
       <span class="name">${name}</span>
     </div>`;
   card.querySelector('.star').addEventListener('click', (e) => { e.stopPropagation(); toggleFav(name); });
-  card.addEventListener('click', () => {
-    showMatch(name);
-    sLS(LS.recent, name); updateRecent();
-    if (CORE.includes(name)) return;
-    const more = $('#moreColors'); if (more && more.open) more.removeAttribute('open'); else $('#allSection')?.removeAttribute('open');
-  });
+  card.addEventListener('click', () => onColorCardClick(name)); 
   return card;
 }
 
-/* ===== 렌더 ===== */
-function renderAll(){
-  const fset = favSet();
-  const favArr = NAMES.filter(n => fset.has(n));
-  const favSec = $('#favSection');
-  if(favArr.length){
-    favSec.style.display = 'block';
-    $('#favCount').textContent = `${favArr.length}개`;
-    const favGrid = $('#favGrid'); favGrid.innerHTML = '';
-    favArr.forEach(n => favGrid.appendChild(makeCard(n)));
-  } else { favSec.style.display = 'none'; }
-
+function renderPalette(){
   const coreGrid = $('#coreGrid'); coreGrid.innerHTML = ''; CORE.forEach(n => coreGrid.appendChild(makeCard(n)));
   const restGrid = $('#restGrid'); restGrid.innerHTML = ''; REST.forEach(n => restGrid.appendChild(makeCard(n)));
   $('#moreCount').textContent = `${REST.length}개`; $('#allCount').textContent = `총 ${NAMES.length}개`;
 }
 
-/* ===== 링크 유틸 ===== */
+function updateModeTitles(){
+  const mode = current('mode')||'top2bottom';
+  if(mode==='top2bottom'){
+    $('#paletteTitle').textContent = '모든 상의 색';
+    $('#resultTitle').textContent = '추천 하의';
+  } else {
+    $('#paletteTitle').textContent = '모든 하의 색';
+    $('#resultTitle').textContent = '추천 상의';
+  }
+}
+
+/* 링크 (기존과 동일) */
 function q(s){ return encodeURIComponent(String(s||'').replace(/\s+/g,' ').trim()); }
-function updateTopMusinsaLink(topColorName){
-  const el = document.getElementById('musinsaTopLink'); const wrap = document.getElementById('musinsaTopWrap');
-  if(!el||!wrap) return;
-  if(!topColorName){ wrap.style.display='none'; return; }
+function updateMusinsaLink(which, colorName){
+  const wrap = document.getElementById(which==='top' ? 'musinsaTopWrap' : 'musinsaBottomWrap');
+  const el = document.getElementById(which==='top' ? 'musinsaTopLink' : 'musinsaBottomLink');
+  if(!wrap||!el) return;
+  if(!colorName){ wrap.style.display='none'; return; }
   wrap.style.display='block';
-  // “{색} 상의”로 검색
-  const query = `${topColorName} 상의`;
+  const query = which==='top' ? `${colorName} 상의` : `${colorName} 바지`;
   const url = `https://www.musinsa.com/search/musinsa?q=${q(query)}`;
-  el.textContent = `‘${topColorName}’ 색 상의 검색하기`; el.href = url;
-}
-function updateBottomMusinsaLink(bottomColorName){
-  const el = document.getElementById('musinsaBottomLink'); const wrap = document.getElementById('musinsaBottomWrap');
-  if(!el||!wrap) return;
-  if(!bottomColorName){ wrap.style.display='none'; return; }
-  wrap.style.display='block';
-  const query = `${bottomColorName} 바지`;
-  const url = `https://www.musinsa.com/search/musinsa?q=${q(query)}`;
-  el.textContent = `‘${bottomColorName}’ 색 하의 검색하기`; el.href = url;
+  el.textContent = `‘${colorName}’ 색 ${which==='top'?'상의':'하의'} 검색하기`;
+  el.href = url;
 }
 
-/* ===== 결과 표시 ===== */
-function showMatch(name){
-  const data = COLOR_MAP[name];
+/* ===== 수정: AI 결과 렌더링 ===== */
+
+/**
+ * AI 추천 칩 (하나)을 만듭니다.
+ */
+function createRecoChip(item) {
+  return `
+    <div class="chip chip-reco" data-color="${item.name}">
+      <div class="row">
+        <span class="swatch" style="background:${COLOR_HEX[item.name]||'#9aa3b2'}"></span>
+        <span class="name">${item.name}</span>
+      </div>
+      <p class="reasoning">${item.reasoning}</p>
+    </div>`;
+}
+
+/**
+ * AI 추천 그룹 (찰떡/무난/고수) 섹션을 만듭니다.
+ */
+function createSectionWithAI(label, cls, items) {
+  if (!items || !items.length) return '';
+  return `
+    <div class="panel">
+      <div class="sec-head"><div class="tag ${cls}">${label}</div><div class="muted">${items.length}개</div></div>
+      <div class="chips" style="flex-direction:column;">
+        ${items.map(createRecoChip).join('')}
+      </div>
+    </div>`;
+}
+
+/**
+ * AI 응답을 받아와 전체 결과 영역을 그립니다. (수정됨)
+ */
+function renderAIResult(request, aiResponse) {
+  const { top: reqTop, bottom: reqBottom, text } = request;
+  // (수정) AI가 제안한 상/하의 조합을 받음
+  const { perfect, safe, pro, _suggestedTop, _suggestedBottom } = aiResponse; 
+  
+  const allItems = [...(perfect||[]), ...(safe||[]), ...(pro||[])];
+  const firstReco = allItems[0]?.name; // 추천 목록의 첫번째 (예: 아이보리)
+
+  let topName, bottomName;
+
+  // (핵심 수정) AI가 페어를 제안한 경우 (예: '데이트룩')
+  if (_suggestedTop && _suggestedBottom) {
+    topName = _suggestedTop;
+    bottomName = _suggestedBottom;
+  } 
+  // (기존) 색상 기반 요청
+  else if (reqTop) { // 상의 -> 하의
+    topName = reqTop;
+    bottomName = firstReco || '추천 없음';
+  } else if (reqBottom) { // 하의 -> 상의
+    topName = firstReco || '추천 없음';
+    bottomName = reqBottom;
+  }
+
+  // 헥스 코드 찾기 (없으면 기본값)
+  const topHex = COLOR_HEX[topName] || '#444';
+  const bottomHex = COLOR_HEX[bottomName] || '#555';
+
   const area = $('#resultArea');
-  if (!data) { area.innerHTML = `<p style="color:#93a0ba">등록되지 않은 색상: "${name}"</p>`; return; }
-  const topHex = COLOR_HEX[name] || '#999';
-  const firstBottomName = (data.perfect && data.perfect[0]) || (data.safe && data.safe[0]) || '미선택';
-  const firstBottomHex = COLOR_HEX[firstBottomName] || '#555';
-
   area.innerHTML = `
     <div class="preview-wrap">
       <div class="preview">
         <div id="previewTop" class="preview-top" style="background:${topHex}"></div>
-        <div id="previewBottom" class="preview-bottom" style="background:${firstBottomHex}"></div>
+        <div id="previewBottom" class="preview-bottom" style="background:${bottomHex}"></div>
       </div>
       <div class="preview-info">
         <div class="preview-label">상의</div>
-        <div class="preview-color-name">${name}</div>
+        <div id="topColorName" class="preview-color-name">${topName}</div>
         <div class="preview-label" style="margin-top:8px;">하의</div>
-        <div id="bottomColorName" class="preview-color-name">${firstBottomName}</div>
+        <div id="bottomColorName" class="preview-color-name">${bottomName}</div>
       </div>
     </div>
     <div id="recoGrid" class="grid"></div>
@@ -237,69 +467,164 @@ function showMatch(name){
     <div class="panel" id="musinsaTopWrap" style="margin-top:12px; display:none;">
       <div class="sec-head"><div class="tag">무신사 링크</div><div class="muted">상의</div></div>
       <p style="margin:2px 0 0 0; padding:0 6px 6px 6px;">
-        <a id="musinsaTopLink" href="#" target="_blank" rel="noopener" style="color:var(--safe); text-decoration:underline;">-</a>
+        <a id="musinsaTopLink" href="#" target="_blank" rel="noopener" style="text-decoration:underline;">-</a>
       </p>
     </div>
 
     <div class="panel" id="musinsaBottomWrap" style="margin-top:8px; display:none;">
       <div class="sec-head"><div class="tag">무신사 링크</div><div class="muted">하의</div></div>
       <p style="margin:2px 0 0 0; padding:0 6px 6px 6px;">
-        <a id="musinsaBottomLink" href="#" target="_blank" rel="noopener" style="color:var(--safe); text-decoration:underline;">-</a>
+        <a id="musinsaBottomLink" href="#" target="_blank" rel="noopener" style="text-decoration:underline;">-</a>
       </p>
     </div>`;
 
-  const recoGrid = $('#recoGrid');
-  const createSection = (label, cls, arr) => {
-    if (!arr || arr.length === 0) return '';
-    return `
-      <div class="panel">
-        <div class="sec-head"><div class="tag ${cls}">${label}</div><div class="muted">${arr.length}개</div></div>
-        <div class="chips">
-          ${(arr||[]).map(c => `
-            <div class="chip" data-color="${c}">
-              <span class="swatch" style="background:${COLOR_HEX[c] || '#9aa3b2'}"></span>${c}
-            </div>`).join('')}
-        </div>
-      </div>`;
-  };
-  recoGrid.innerHTML = createSection('찰떡','ok',data.perfect) +
-                       createSection('무난','safe',data.safe) +
-                       createSection('고수','pro',data.pro);
-
-  // 초기 링크 설정
-  updateTopMusinsaLink(name);
-  updateBottomMusinsaLink(firstBottomName);
+  const grid = $('#recoGrid');
+  grid.innerHTML =
+    createSectionWithAI('찰떡', 'ok', perfect) +
+    createSectionWithAI('무난', 'safe', safe) +
+    createSectionWithAI('고수', 'pro', pro);
+    
+  // 유효한 색상 이름일 때만 링크 업데이트
+  updateMusinsaLink('top', COLOR_HEX[topName] ? topName : null);
+  updateMusinsaLink('bottom', COLOR_HEX[bottomName] ? bottomName : null);
 }
 
-function updateRecent(){ const r = gLS(LS.recent, null); $('#recentHint').textContent = '최근 선택: ' + (r || '-'); }
 
-/* ===== 초기화/이벤트 ===== */
-function resetAll(){
-  sLS(LS.fav, []); sLS(LS.recent, null);
-  $('#resultArea').innerHTML = '<p style="color:#93a0ba">💡 상의 카드를 클릭하면 하의 추천이 여기에 표시됩니다.</p>';
-  renderAll(); updateRecent(); $('#allSection').setAttribute('open',''); $('#moreColors').removeAttribute('open');
+/* ===== 수정: 이벤트 핸들러 (AI 호출) ===== */
+
+/**
+ * 색상 카드를 클릭했을 때 AI 추천 실행
+ */
+function onColorCardClick(name) {
+  const mode = current('mode') || 'top2bottom';
+  const mood = current('mood');
+  const style = current('style');
+  const text = $('#textPrompt').value;
+  
+  sLS(LS.recent, name);
+  updateRecent();
+
+  let request = { mood, style, text };
+  if (mode === 'top2bottom') {
+    request.top = name;
+  } else {
+    request.bottom = name;
+  }
+
+  getAndRenderAIRecommendation(request);
 }
 
+/**
+ * 'AI 추천 받기' 버튼 클릭 시 (수정됨)
+ */
+function onAIButtonClick() {
+  const mode = current('mode') || 'top2bottom';
+  const mood = current('mood');
+  const style = current('style');
+  const text = $('#textPrompt').value.trim();
+
+  if (!text) {
+    alert("AI에게 요청할 내용을 입력해주세요. (예: 청바지 코디)");
+    return;
+  }
+  
+  let request = { mood, style, text };
+  
+  // (핵심 수정)
+  // 텍스트를 알려진 색상/아이템으로 먼저 매핑 시도
+  let baseItem = null;
+  if (text.includes("청바지") || text.includes("데님")) {
+    baseItem = "중청 데님";
+  } else if (text.includes("흰 셔츠") || text.includes("화이트")) {
+    baseItem = "화이트";
+  } else if (text.includes("검정 슬랙스") || text.includes("블랙")) {
+    baseItem = "블랙";
+  }
+  // ...
+
+  if (baseItem) { // 매핑 성공 (아이템/색상 요청)
+    if (mode === 'bottom2top') {
+      request.bottom = baseItem;
+      $('#resultTitle').textContent = 'AI 추천 (상의)';
+    } else {
+      request.top = baseItem;
+      $('#resultTitle').textContent = 'AI 추천 (하의)';
+    }
+    sLS(LS.recent, baseItem);
+  } else { // 매핑 실패 (상황 요청. 예: "데이트룩")
+    // request.top, request.bottom을 설정하지 *않음*
+    // AI가 text만 보고 페어를 제안해야 함
+    // (모드에 따라 추천 대상이 바뀔 수 있음 - 현재는 하의 추천으로 통일)
+    $('#resultTitle').textContent = 'AI 추천 (상황 기반)';
+    sLS(LS.recent, text); // "데이트룩"을 저장
+  }
+  
+  updateRecent();
+  getAndRenderAIRecommendation(request);
+}
+
+
+function updateRecent() { 
+  const r = gLS(LS.recent, null); 
+  $('#recentHint').textContent = '최근 선택: ' + (r || '-'); 
+}
+
+/* 초기화/이벤트 */
 document.addEventListener('DOMContentLoaded', () => {
-  renderAll(); updateRecent();
-  const recent = gLS(LS.recent, null);
-  if (recent && COLOR_MAP[recent]) { showMatch(recent); }
+  buildChips(); updateModeTitles(); renderPalette(); updateRecent();
+  
+  $('#aiBtn').addEventListener('click', onAIButtonClick);
 
-  const resetBtn = $('#resetBtn');
-  if (resetBtn) resetBtn.addEventListener('click', resetAll);
-
-  // 하의 칩 클릭 시 미리보기 + 하의 링크 갱신
+  // 추천 칩 클릭 시 미리보기 업데이트 (수정됨)
   $('#resultArea').addEventListener('click', (e) => {
-    const chip = e.target.closest('.chip'); if (!chip) return;
-    const bottomColorName = chip.dataset.color;
-    if (bottomColorName) {
+    const chip = e.target.closest('.chip-reco'); if (!chip) return;
+    const colorName = chip.dataset.color; if (!colorName) return;
+
+    // (수정) 추천 제목(Title)을 기준으로 상의/하의 업데이트 여부 결정
+    const title = $('#resultTitle').textContent;
+    
+    if (title.includes('상의')) { 
+      // 'AI 추천 (상의)' -> 칩은 상의임
+      const pt = document.getElementById('previewTop');
+      if (pt) pt.style.backgroundColor = COLOR_HEX[colorName] || '#555';
+      const tcn = document.getElementById('topColorName');
+      if (tcn) tcn.textContent = colorName;
+      updateMusinsaLink('top', colorName);
+    } else { 
+      // 'AI 추천 (하의)' 또는 'AI 추천 (상황 기반)' -> 칩은 하의임
       const pb = document.getElementById('previewBottom');
-      if (pb) pb.style.backgroundColor = COLOR_HEX[bottomColorName] || '#555';
+      if (pb) pb.style.backgroundColor = COLOR_HEX[colorName] || '#555';
       const bcn = document.getElementById('bottomColorName');
-      if (bcn) bcn.textContent = bottomColorName;
-      updateBottomMusinsaLink(bottomColorName);
+      if (bcn) bcn.textContent = colorName;
+      updateMusinsaLink('bottom', colorName);
     }
   });
+
+
+  // chip interactions
+  document.body.addEventListener('click', (e)=>{
+    const c = e.target.closest('.chip'); if(!c) return;
+    const group = c.dataset.group; if(!group) return;
+    const id = c.dataset.id; 
+    if (group === 'mood' || group === 'style' || group === 'mode') {
+      activateChip(group, id); 
+      updateHints();
+    }
+  });
+
+  // reset
+  $('#resetBtn').addEventListener('click', ()=>{
+    localStorage.clear(); buildChips(); updateModeTitles(); renderPalette();
+    $('#resultArea').innerHTML = '<p style="color:#93a0ba">💡 색 카드를 클릭하거나 AI에 요청하면 추천이 여기에 표시됩니다.</p>';
+    $('#textPrompt').value = '';
+    updateRecent();
+  });
+
+  // UX modal
+  const modal = $('#uxModal');
+  $('#uxBtn').addEventListener('click', ()=>{ modal.style.display='flex';});
+  $('#uxClose').addEventListener('click', ()=>{ modal.style.display='none';});
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.style.display='none'; });
 });
 </script>
 </body>
